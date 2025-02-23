@@ -32,6 +32,8 @@ class FileSystem:
             self.ls()
         elif cmd == "cat" and args:
             self.cat(args[0])
+        elif cmd == "rm" and args:
+            self.rm(args[0])
         else:
             print("Command not found")
 
@@ -80,6 +82,11 @@ class FileSystem:
 
     def ls(self):
         print(" | ".join(self.current_folder.contents.keys()))
+    def rm(self, name):
+        if name in self.current_folder.contents:
+            del self.current_folder.contents[name]
+        else:
+            print("File or folder not found")
 
 fs = FileSystem()
 while True:
