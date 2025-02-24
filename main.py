@@ -36,25 +36,48 @@ class FileSystem:
             self.rm(args[0])
         else:
             print("Command not found")
-
     def mkdir(self, data):
         name = data[0]
+        path_elements = name.split("/")
         value = " ".join(data[1:])
-        if ".txt" in name:
-            self.current_folder.contents[name] = File(name, value)
-        else:
-            self.current_folder.contents[name] = Folder(name)
+        
+        temp = self.current_folder
+        if name.startswith("/"):
+            self.current_folder = self.root
 
+        for i in range(len(path_elements)-1):
+            if path_elements[i] not in self.current_folder.contents:
+                self.current_folder.contents[path_elements[i]] = Folder(path_elements[i])
+            self.current_folder = self.current_folder.contents[path_elements[i]]
+        
+        if "." in path_elements[-1]:
+            self.current_folder.contents[path_elements[-1]] = File(path_elements[-1], value)
+        else:
+            self.current_folder.contents[path_elements[-1]] = Folder(path_elements[-1])
+
+        self.current_folder = temp
     def cat(self, filename):
-        if filename in self.current_folder.contents:
-            item = self.current_folder.contents[filename]
-            if isinstance(item, File):
-                print(item.get_value())
-            else:
-                print(f"{filename} is not a file")
-        else:
-            print("File not found")
+        path = filename.strip().split("/")
+        temp = self.current_folder
 
+        if filename.startswith("/"):
+            current = self.root
+            path = filename[1:].split("/")
+        else:
+            current = self.current_folder
+            
+        for part in path[:-1]:
+            if part in current.contents and isinstance(current.contents[part], Folder):
+                current = current.contents[part]
+            else:
+                print(f"Invalid path: {filename}")
+                return
+
+        final_name = path[-1]
+        if final_name in current.contents and isinstance(current.contents[final_name], File):
+            print(current.contents[final_name].get_value())
+        else:
+            print(f"{filename} is not a file or does not exist")
     def cd(self, folder_name):
         if folder_name == "..":
             if self.path == "/":
@@ -82,9 +105,26 @@ class FileSystem:
 
     def ls(self):
         print(" | ".join(self.current_folder.contents.keys()))
-    def rm(self, name):
-        if name in self.current_folder.contents:
-            del self.current_folder.contents[name]
+    def rm(self, filename):
+        path = filename.strip().split("/")
+        temp = self.current_folder
+
+        if filename.startswith("/"):
+            current = self.root
+            path = filename[1:].split("/")
+        else:
+            current = self.current_folder
+            
+        for part in path[:-1]:
+            if part in current.contents and isinstance(current.contents[part], Folder):
+                current = current.contents[part]
+            else:
+                print(f"Invalid path: {filename}")
+                return
+
+        final_name = path[-1]
+        if final_name in current.contents:
+            del current.contents[final_name]
         else:
             print("File or folder not found")
 
