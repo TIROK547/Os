@@ -2,8 +2,10 @@ class File:
     def __init__(self, name, value=""):
         self.name = name
         self.value = value
+
     def get_value(self):
         return str(self.value)
+
     def set_value(self, value):
         self.value = value
 
@@ -29,13 +31,17 @@ class FileSystem:
         elif cmd == "cd" and args:
             self.cd(args[0])
         elif cmd == "ls":
-            self.ls()
+            if len(args) != 0:
+                self.ls(args[0])
+            else:
+                self.ls()
         elif cmd == "cat" and args:
             self.cat(args[0])
         elif cmd == "rm" and args:
             self.rm(args[0])
         else:
             print("Command not found")
+
     def mkdir(self, data):
         name = data[0]
         path_elements = name.split("/")
@@ -45,7 +51,7 @@ class FileSystem:
         if name.startswith("/"):
             self.current_folder = self.root
 
-        for i in range(len(path_elements)-1):
+        for i in range(len(path_elements) - 1):
             if path_elements[i] not in self.current_folder.contents:
                 self.current_folder.contents[path_elements[i]] = Folder(path_elements[i])
             self.current_folder = self.current_folder.contents[path_elements[i]]
@@ -56,6 +62,7 @@ class FileSystem:
             self.current_folder.contents[path_elements[-1]] = Folder(path_elements[-1])
 
         self.current_folder = temp
+
     def cat(self, filename):
         path = filename.strip().split("/")
         temp = self.current_folder
@@ -78,6 +85,7 @@ class FileSystem:
             print(current.contents[final_name].get_value())
         else:
             print(f"{filename} is not a file or does not exist")
+
     def cd(self, folder_name):
         if folder_name == "..":
             if self.path == "/":
@@ -103,8 +111,27 @@ class FileSystem:
                 current = current.contents.get(part, current)
         return current
 
-    def ls(self):
-        print(" | ".join(self.current_folder.contents.keys()))
+    def ls(self, filename: str = None):
+        if filename is None:
+            print(" | ".join(self.current_folder.contents.keys()))
+        else:
+            path = filename.strip().split("/")
+
+            if filename.startswith("/"):
+                current = self.root
+                path = filename[1:].split("/")
+            else:
+                current = self.current_folder
+
+            for part in path:
+                if part in current.contents and isinstance(current.contents[part], Folder):
+                    current = current.contents[part]
+                else:
+                    print(f"Invalid path: {filename}")
+                    return
+
+            print(" | ".join(current.contents.keys()))
+
     def rm(self, filename):
         path = filename.strip().split("/")
         temp = self.current_folder
