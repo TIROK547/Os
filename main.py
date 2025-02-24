@@ -1,3 +1,6 @@
+import json
+import os
+
 class File:
     def __init__(self, name, value=""):
         self.name = name
@@ -9,16 +12,28 @@ class File:
     def set_value(self, value):
         self.value = value
 
+    def to_dict(self):
+        return {"name": self.name, "value": self.value, "type": "file"}
+
 class Folder:
     def __init__(self, name):
         self.name = name
         self.contents = {}
 
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "type": "folder",
+            "contents": {key: value.to_dict() for key, value in self.contents.items()},
+        }
+
 class FileSystem:
-    def __init__(self):
+    def __init__(self, save_file="filesystem.json"):
         self.root = Folder("/")
         self.current_folder = self.root
         self.path = "/"
+        self.save_file = save_file
+        self.load()
 
     def execute(self, command):
         parts = command.strip().split()
@@ -35,10 +50,22 @@ class FileSystem:
                 self.ls(args[0])
             else:
                 self.ls()
+        elif command == "clear":
+            self.clear()
+            print("data cleared")
+            self.load()
         elif cmd == "cat" and args:
             self.cat(args[0])
         elif cmd == "rm" and args:
             self.rm(args[0])
+        elif cmd == "cp" and args:
+            self.mkdir([args[1]])
+            self.rm(args[0])
+        elif cmd == "mv":
+            pass
+        elif cmd == "save":
+            self.save()
+            print("File system saved.")
         else:
             print("Command not found")
 
@@ -49,7 +76,7 @@ class FileSystem:
         
         temp = self.current_folder
         if name.startswith("/"):
-            self.current_folder = self.root
+            self.current_folder = self.root 
 
         for i in range(len(path_elements) - 1):
             if path_elements[i] not in self.current_folder.contents:
@@ -62,6 +89,7 @@ class FileSystem:
             self.current_folder.contents[path_elements[-1]] = Folder(path_elements[-1])
 
         self.current_folder = temp
+        self.save()
 
     def cat(self, filename):
         path = filename.strip().split("/")
@@ -87,7 +115,10 @@ class FileSystem:
             print(f"{filename} is not a file or does not exist")
 
     def cd(self, folder_name):
-        if folder_name == "..":
+        if folder_name == "/":
+            self.path = "/"
+            self.current_folder = self.navigate_to_folder(self.path)
+        elif folder_name == "..":
             if self.path == "/":
                 print("Already at the root directory")
             else:
@@ -152,12 +183,50 @@ class FileSystem:
         final_name = path[-1]
         if final_name in current.contents:
             del current.contents[final_name]
+            self.save()
         else:
             print("File or folder not found")
+
+    def to_dict(self):
+        return {
+            "root": self.root.to_dict(),
+            "path": self.path
+        }
+
+    def save(self):
+        with open(self.save_file, "w") as f:
+            json.dump(self.to_dict(), f, indent=4)
+
+    def load(self):
+        if os.path.exists(self.save_file):
+            with open(self.save_file, "r") as f:
+                data = json.load(f)
+                self.root = self.dict_to_folder(data["root"])
+                self.current_folder = self.navigate_to_folder(data["path"])
+                self.path = data["path"]
+
+    def clear(self):
+        if os.path.exists(self.save_file):
+            os.remove(self.save_file)
+        self.root = Folder("/")
+        self.current_folder = self.root
+        self.path = "/"
+        print("File system reset.")
+
+    def dict_to_folder(self, data):
+        folder = Folder(data["name"])
+        for name, content in data["contents"].items():
+            if content["type"] == "file":
+                folder.contents[name] = File(content["name"], content["value"])
+            else:
+                folder.contents[name] = self.dict_to_folder(content)
+        return folder
 
 fs = FileSystem()
 while True:
     command = input(f"{fs.path} >>> ")
     if command.lower() == "exit":
+        fs.save()
+        print("File system saved. Exiting...")
         break
     fs.execute(command)
