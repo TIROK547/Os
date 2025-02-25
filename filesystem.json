@@ -3,48 +3,7 @@
         "name": "/",
         "type": "folder",
         "password": null,
-        "contents": {
-            "a": {
-                "name": "a",
-                "type": "folder",
-                "password": null,
-                "contents": {
-                    "b": {
-                        "name": "b",
-                        "type": "folder",
-                        "password": null,
-                        "contents": {}
-                    }
-                }
-            },
-            "b": {
-                "name": "b",
-                "type": "folder",
-                "password": null,
-                "contents": {
-                    ".b": {
-                        "name": ".b",
-                        "type": "folder",
-                        "password": null,
-                        "contents": {
-                            "c": {
-                                "name": "c",
-                                "type": "folder",
-                                "password": null,
-                                "contents": {
-                                    ".g": {
-                                        "name": ".g",
-                                        "type": "folder",
-                                        "password": "f",
-                                        "contents": {}
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        "contents": {}
     },
-    "path": "/b/.b/c"
+    "path": "/"
 }

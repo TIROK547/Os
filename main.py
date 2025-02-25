@@ -145,21 +145,29 @@ class FileSystem:
 
         name = args[0]
         value = " ".join(args[1:]) if len(args) > 1 else ""
-        path_elements = " ".join(name.split("/")).strip().split(" ")
+        path_elements = " ".join(name.split("/")).strip().split(" ") #! من خدای تکنولوژیم
         file_password = None
 
         temp = self.current_folder
-
-        if path_elements[-1].startswith("."):
-            file_password = input(f"Set password for {name}: ")
-
+        
         if name.startswith("/"):
             self.current_folder = self.root
 
+        
         for i in range(len(path_elements) - 1):
+            if path_elements[i].startswith("."):
+                file_password = input(f"Set password for {path_elements[i]}: ")
+
+            if not self.check_password(self.current_folder, path_elements[i]):
+                return
             if path_elements[i] not in self.current_folder.contents:
-                self.current_folder.contents[path_elements[i]] = Folder(path_elements[i])
+                self.current_folder.contents[path_elements[i]] = Folder(path_elements[i], file_password)
             self.current_folder = self.current_folder.contents[path_elements[i]]
+            file_password = None
+
+
+        if path_elements[-1].startswith("."):
+            file_password = input(f"Set password for {name}: ")
 
         final_name = path_elements[-1]
         is_hidden_folder = final_name.startswith(".") and "." not in final_name[1:]
