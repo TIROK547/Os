@@ -1,29 +1,58 @@
 import json
 import os
+from typing import Dict, Union, List, Optional
 
 class File:
-    def __init__(self, name, value="", password=None):
+    """Represents a file in the file system."""
+    
+    def __init__(self, name: str, value: str = "", password: Optional[str] = None) -> None:
+        """
+        Initialize a File object.
+
+        Args:
+            name (str): The name of the file.
+            value (str, optional): The content of the file. Defaults to "".
+            password (Optional[str], optional): Password to protect the file. Defaults to None.
+        """
         self.name = name
         self.value = value
         self.password = password
 
-    def get_value(self):
+    def get_value(self) -> str:
+        """Return the content of the file as a string."""
         return str(self.value)
 
-    def set_value(self, value):
+    def set_value(self, value: str) -> None:
+        """
+        Set the content of the file.
+
+        Args:
+            value (str): The new content of the file.
+        """
         self.value = value
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Union[str, None]]:
+        """Convert the File object to a dictionary for serialization."""
         return {"name": self.name, "value": self.value, "type": "file", "password": self.password}
 
 
 class Folder:
-    def __init__(self, name, password=None):
+    """Represents a folder in the file system."""
+    
+    def __init__(self, name: str, password: Optional[str] = None) -> None:
+        """
+        Initialize a Folder object.
+
+        Args:
+            name (str): The name of the folder.
+            password (Optional[str], optional): Password to protect the folder. Defaults to None.
+        """
         self.name = name
-        self.contents = {}
+        self.contents: Dict[str, Union[File, 'Folder']] = {}
         self.password = password
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Union[str, Dict]]:
+        """Convert the Folder object to a dictionary for serialization."""
         return {
             "name": self.name,
             "type": "folder",
@@ -33,14 +62,28 @@ class Folder:
 
 
 class FileSystem:
-    def __init__(self, save_file="filesystem.json"):
+    """Represents a file system with folders and files."""
+    
+    def __init__(self, save_file: str = "filesystem.json") -> None:
+        """
+        Initialize the FileSystem object.
+
+        Args:
+            save_file (str, optional): The file to save/load the file system state. Defaults to "filesystem.json".
+        """
         self.root = Folder("/")
         self.current_folder = self.root
         self.path = "/"
         self.save_file = save_file
         self.load()
 
-    def execute(self, command):
+    def execute(self, command: str) -> None:
+        """
+        Execute a command in the file system.
+
+        Args:
+            command (str): The command to execute.
+        """
         parts = command.strip().split()
         if not parts:
             return
@@ -51,10 +94,7 @@ class FileSystem:
         elif cmd == "cd" and args:
             self.cd(args[0])
         elif cmd == "ls":
-            if len(args) != 0:
-                self.ls(args[0])
-            else:
-                self.ls()
+            self.ls(args[0] if args else None)
         elif command == "clear":
             self.clear()
             print("data cleared")
@@ -74,22 +114,35 @@ class FileSystem:
         else:
             print("Command not found")
 
-    def check_password(self, item, item_name):
-        """Check if the item is password-protected and verify the password."""
+    def check_password(self, item: Union[File, Folder], item_name: str) -> bool:
+        """
+        Check if the item is password-protected and verify the password.
+
+        Args:
+            item (Union[File, Folder]): The item to check.
+            item_name (str): The name of the item.
+
+        Returns:
+            bool: True if the password is correct or not required, False otherwise.
+        """
         if item.password:
             password = input(f"Enter password for {item_name}: ")
             if password != item.password:
                 print("Incorrect password")
                 return False
         return True
+    
+    def mkdir(self, args: List[str]) -> None:
+        """
+        Create a file or folder.
 
-    def mkdir(self, args):
-        """Create a file or folder."""
+        Args:
+            args (List[str]): The arguments for the command, including name and optional value.
+        """
         if not args:
             print("Usage: mkdir <name> [value]")
             return
 
-        # Extract the name and value from the arguments
         name = args[0]
         value = " ".join(args[1:]) if len(args) > 1 else ""
         path_elements = name.split("/")
@@ -97,31 +150,36 @@ class FileSystem:
 
         temp = self.current_folder
 
-        # Check if the name indicates a password-protected file/folder
         if path_elements[-1].startswith("."):
             file_password = input(f"Set password for {name}: ")
 
         if name.startswith("/"):
             self.current_folder = self.root
 
-        # Navigate to the parent folder
         for i in range(len(path_elements) - 1):
             if path_elements[i] not in self.current_folder.contents:
                 self.current_folder.contents[path_elements[i]] = Folder(path_elements[i])
             self.current_folder = self.current_folder.contents[path_elements[i]]
 
-        # Create the file or folder
         final_name = path_elements[-1]
-        if "." in final_name:  # It's a file
+        is_hidden_folder = final_name.startswith(".") and "." not in final_name[1:]
+        is_file = "." in final_name and not is_hidden_folder
+
+        if is_file:
             self.current_folder.contents[final_name] = File(final_name, value, file_password)
-        else:  # It's a folder
+        else:
             self.current_folder.contents[final_name] = Folder(final_name, file_password)
 
         self.current_folder = temp
         self.save()
+    
+    def cat(self, filename: str) -> None:
+        """
+        Display the contents of a file.
 
-    def cat(self, filename):
-        """Display the contents of a file."""
+        Args:
+            filename (str): The name of the file to display.
+        """
         path = filename.strip().split("/")
         temp = self.current_folder
 
@@ -147,8 +205,13 @@ class FileSystem:
         else:
             print(f"{filename} is not a file or does not exist")
 
-    def cd(self, folder_name):
-        """Change the current directory."""
+    def cd(self, folder_name: str) -> None:
+        """
+        Change the current directory.
+
+        Args:
+            folder_name (str): The name of the folder to navigate to.
+        """
         if folder_name == "/":
             self.path = "/"
             self.current_folder = self.navigate_to_folder(self.path)
@@ -171,8 +234,16 @@ class FileSystem:
             else:
                 print(f"No such folder: {folder_name}")
 
-    def navigate_to_folder(self, path):
-        """Navigate to a folder based on the given path."""
+    def navigate_to_folder(self, path: str) -> Folder:
+        """
+        Navigate to a folder based on the given path.
+
+        Args:
+            path (str): The path to navigate to.
+
+        Returns:
+            Folder: The folder at the specified path.
+        """
         parts = path.strip("/").split("/")
         current = self.root
         for part in parts:
@@ -180,8 +251,13 @@ class FileSystem:
                 current = current.contents.get(part, current)
         return current
 
-    def ls(self, filename: str = None):
-        """List the contents of a folder."""
+    def ls(self, filename: Optional[str] = None) -> None:
+        """
+        List the contents of a folder.
+
+        Args:
+            filename (Optional[str], optional): The folder to list. Defaults to the current folder.
+        """
         if filename is None:
             print(" | ".join(self.current_folder.contents.keys()))
         else:
@@ -205,8 +281,13 @@ class FileSystem:
 
             print(" | ".join(current.contents.keys()))
 
-    def rm(self, filename):
-        """Remove a file or folder."""
+    def rm(self, filename: str) -> None:
+        """
+        Remove a file or folder.
+
+        Args:
+            filename (str): The name of the file or folder to remove.
+        """
         path = filename.strip().split("/")
         temp = self.current_folder
 
@@ -236,19 +317,19 @@ class FileSystem:
         else:
             print("File or folder not found")
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Union[str, Dict]]:
         """Convert the file system to a dictionary for saving."""
         return {
             "root": self.root.to_dict(),
             "path": self.path
         }
 
-    def save(self):
+    def save(self) -> None:
         """Save the file system to a file."""
         with open(self.save_file, "w") as f:
             json.dump(self.to_dict(), f, indent=4)
 
-    def load(self):
+    def load(self) -> None:
         """Load the file system from a file."""
         if os.path.exists(self.save_file):
             with open(self.save_file, "r") as f:
@@ -257,8 +338,8 @@ class FileSystem:
                 self.current_folder = self.navigate_to_folder(data["path"])
                 self.path = data["path"]
 
-    def clear(self):
-        """Reset the file system."""
+    def clear(self) -> None:
+        """Reset the file system to its initial state."""
         if os.path.exists(self.save_file):
             os.remove(self.save_file)
         self.root = Folder("/")
@@ -266,8 +347,16 @@ class FileSystem:
         self.path = "/"
         print("File system reset.")
 
-    def dict_to_folder(self, data):
-        """Convert a dictionary to a Folder object."""
+    def dict_to_folder(self, data: Dict) -> Folder:
+        """
+        Convert a dictionary to a Folder object.
+
+        Args:
+            data (Dict): The dictionary representation of the folder.
+
+        Returns:
+            Folder: The reconstructed Folder object.
+        """
         folder = Folder(data["name"])
         for name, content in data["contents"].items():
             if content["type"] == "file":
@@ -277,11 +366,20 @@ class FileSystem:
         return folder
 
 
-fs = FileSystem()
-while True:
-    command = input(f"{fs.path} >>> ")
-    if command.lower() == "exit":
-        fs.save()
-        print("File system saved. Exiting...")
-        break
-    fs.execute(command)
+def main() -> None:
+    """Main function to run the file system simulation."""
+    fs = FileSystem()
+    while True:
+        command = input(f"{fs.path} >>> ")
+        if command.lower() == "exit":
+            fs.save()
+            print("File system saved. Exiting...")
+            break
+        fs.execute(command)
+
+if __name__ == "__main__":
+    main()
+#! bug list:
+#? saves the value as line(should be array of lines)
+#? using the root rout(/) makes a new folder with ""
+#? cd does not wort with multi folders(cd a/b/c)
