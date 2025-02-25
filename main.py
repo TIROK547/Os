@@ -145,7 +145,7 @@ class FileSystem:
 
         name = args[0]
         value = " ".join(args[1:]) if len(args) > 1 else ""
-        path_elements = name.split("/")
+        path_elements = " ".join(name.split("/")).strip().split(" ")
         file_password = None
 
         temp = self.current_folder
@@ -204,7 +204,7 @@ class FileSystem:
             print(file.get_value())
         else:
             print(f"{filename} is not a file or does not exist")
-
+            
     def cd(self, folder_name: str) -> None:
         """
         Change the current directory.
@@ -213,26 +213,31 @@ class FileSystem:
             folder_name (str): The name of the folder to navigate to.
         """
         if folder_name == "/":
+            self.current_folder = self.root
             self.path = "/"
-            self.current_folder = self.navigate_to_folder(self.path)
-        elif folder_name == "..":
-            if self.path == "/":
-                print("Already at the root directory")
-            else:
-                self.path = "/".join(self.path.strip("/").split("/")[:-1]) + "/"
-                self.current_folder = self.navigate_to_folder(self.path)
-        else:
-            if folder_name in self.current_folder.contents:
-                if isinstance(self.current_folder.contents[folder_name], Folder):
-                    folder = self.current_folder.contents[folder_name]
-                    if not self.check_password(folder, folder_name):
-                        return
-                    self.current_folder = folder
-                    self.path += folder_name + "/"
-                else:
-                    print(f"{folder_name} is not a folder")
+            return
+
+        path_elements = folder_name.strip("/").split("/")
+        temp_folder = self.root if folder_name.startswith("/") else self.current_folder
+        temp_path = "/" if folder_name.startswith("/") else self.path
+
+        for part in path_elements:
+            if part == "..":
+                if temp_path != "/":
+                    temp_path = "/".join(temp_path.strip("/").split("/")[:-1]) or "/"
+                    temp_folder = self.navigate_to_folder(temp_path)
+            elif part in temp_folder.contents and isinstance(temp_folder.contents[part], Folder):
+                if not self.check_password(temp_folder.contents[part], part):
+                    return
+                temp_folder = temp_folder.contents[part]
+                temp_path = (temp_path.rstrip("/") + "/" + part).replace("//", "/")
             else:
                 print(f"No such folder: {folder_name}")
+                return
+
+        self.current_folder = temp_folder
+        self.path = temp_path
+
 
     def navigate_to_folder(self, path: str) -> Folder:
         """
@@ -379,7 +384,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-#! bug list:
-#? saves the value as line(should be array of lines)
-#? using the root rout(/) makes a new folder with ""
-#? cd does not wort with multi folders(cd a/b/c)
