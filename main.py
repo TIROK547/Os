@@ -5,7 +5,7 @@ from typing import Dict, Union, List, Optional
 class File:
     """Represents a file in the file system."""
     
-    def __init__(self, name: str, value: str = "", password: Optional[str] = None) -> None:
+    def __init__(self, name: str, value: list = [], password: Optional[str] = None) -> None:
         """
         Initialize a File object.
 
@@ -20,7 +20,7 @@ class File:
 
     def get_value(self) -> str:
         """Return the content of the file as a string."""
-        return str(self.value)
+        return (self.value)
 
     def set_value(self, value: str) -> None:
         """
@@ -100,14 +100,15 @@ class FileSystem:
             print("data cleared")
             self.load()
         elif cmd == "cat" and args:
-            self.cat(args[0])
+            print("\n".join(self.cat(args[0])))
         elif cmd == "rm" and args:
             self.rm(args[0])
         elif cmd == "cp" and args:
-            self.mkdir([args[1]])
-            self.rm(args[0])
+            self.cp(args)
         elif cmd == "mv":
             pass
+        elif cmd == "fragment":
+            self.fragment(args[0])
         elif cmd == "save":
             self.save()
             print("File system saved.")
@@ -132,7 +133,26 @@ class FileSystem:
                 return False
         return True
     
-    def mkdir(self, args: List[str]) -> None:
+    def cp(self, args: List[str]):
+        if not args:
+            print("Usage: cp <source> <destination>")
+            return
+        elif len(args) != 2:
+            print("Usage: cp <source> <destination>")
+            return
+        copy_data = self.cat(args[0])
+        self.mkdir([args[1]], copy_data)
+    
+    def fragment(self, args: str) -> None:
+        new_val = self.current_folder.contents[args].get_value()
+        del_indexes = [i for i, line in enumerate(new_val) if line.strip() == ""]
+    
+        for index in reversed(del_indexes):
+            del new_val[index]
+    
+        self.current_folder.contents[args].set_value(new_val)
+
+    def mkdir(self, args: List[str], value:list = []) -> None:
         """
         Create a file or folder.
 
@@ -142,9 +162,8 @@ class FileSystem:
         if not args:
             print("Usage: mkdir <name> [value]")
             return
-
         name = args[0]
-        value = " ".join(args[1:]) if len(args) > 1 else ""
+        last_line = ""
         path_elements = " ".join(name.split("/")).strip().split(" ") #! من خدای تکنولوژیم
         file_password = None
 
@@ -164,16 +183,21 @@ class FileSystem:
                 self.current_folder.contents[path_elements[i]] = Folder(path_elements[i], file_password)
             self.current_folder = self.current_folder.contents[path_elements[i]]
             file_password = None
-
-
+        
         if path_elements[-1].startswith("."):
             file_password = input(f"Set password for {name}: ")
 
         final_name = path_elements[-1]
         is_hidden_folder = final_name.startswith(".") and "." not in final_name[1:]
         is_file = "." in final_name and not is_hidden_folder
-
-        if is_file:
+        if value:
+            print("Value provided. Skipping input.")
+            self.current_folder.contents[final_name] = File(final_name, value, file_password)
+        elif is_file:
+            while last_line != ".":
+                last_line = input(f"Enter value for {name} (press . to stop): ")
+                if last_line != ".":
+                    value.append(last_line)
             self.current_folder.contents[final_name] = File(final_name, value, file_password)
         else:
             self.current_folder.contents[final_name] = Folder(final_name, file_password)
@@ -201,17 +225,17 @@ class FileSystem:
             if part in current.contents and isinstance(current.contents[part], Folder):
                 current = current.contents[part]
             else:
-                print(f"Invalid path: {filename}")
-                return
+                return f"Invalid path: {filename}"
+                
 
         final_name = path[-1]
         if final_name in current.contents and isinstance(current.contents[final_name], File):
             file = current.contents[final_name]
             if not self.check_password(file, final_name):
                 return
-            print(file.get_value())
+            return (file.get_value())
         else:
-            print(f"{filename} is not a file or does not exist")
+            return f"{filename} is not a file or does not exist"
             
     def cd(self, folder_name: str) -> None:
         """
