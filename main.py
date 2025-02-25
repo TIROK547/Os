@@ -2,9 +2,10 @@ import json
 import os
 
 class File:
-    def __init__(self, name, value=""):
+    def __init__(self, name, value="", password=None):
         self.name = name
         self.value = value
+        self.password = password
 
     def get_value(self):
         return str(self.value)
@@ -13,17 +14,19 @@ class File:
         self.value = value
 
     def to_dict(self):
-        return {"name": self.name, "value": self.value, "type": "file"}
+        return {"name": self.name, "value": self.value, "type": "file", "password": self.password}
 
 class Folder:
-    def __init__(self, name):
+    def __init__(self, name, password=None):
         self.name = name
         self.contents = {}
+        self.password = password
 
     def to_dict(self):
         return {
             "name": self.name,
             "type": "folder",
+            "password": self.password,
             "contents": {key: value.to_dict() for key, value in self.contents.items()},
         }
 
@@ -72,9 +75,15 @@ class FileSystem:
     def mkdir(self, data):
         name = data[0]
         path_elements = name.split("/")
-        value = " ".join(data[1:])
+        file_password = None
+        value = " ".join(data[2:])
         
         temp = self.current_folder
+        
+        if path_elements[-1].startswith("."):
+            file_password = data[1].split(" ")[0]
+            print(f"Password for {name}: '{file_password}'")
+            
         if name.startswith("/"):
             self.current_folder = self.root 
 
@@ -82,10 +91,18 @@ class FileSystem:
             if path_elements[i] not in self.current_folder.contents:
                 self.current_folder.contents[path_elements[i]] = Folder(path_elements[i])
             self.current_folder = self.current_folder.contents[path_elements[i]]
-        
-        if "." in path_elements[-1]:
+            
+        if path_elements[-1].startswith('.') and '.' in path_elements[-1][1:]:  # Password-protected file
+            print("pass file")
+            self.current_folder.contents[path_elements[-1]] = File(path_elements[-1], value, file_password)
+        elif not path_elements[-1].startswith('.') and '.' in path_elements[-1]:  # Non-password-protected file
+            print("no pass file")
             self.current_folder.contents[path_elements[-1]] = File(path_elements[-1], value)
-        else:
+        elif path_elements[-1].startswith('.') and '.' not in path_elements[-1][1:]:  # Password-protected folder
+            print("pass folder")
+            self.current_folder.contents[path_elements[-1]] = Folder(path_elements[-1], file_password)
+        else:  # Non-password-protected folder
+            print("no pass folder")
             self.current_folder.contents[path_elements[-1]] = Folder(path_elements[-1])
 
         self.current_folder = temp
