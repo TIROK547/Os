@@ -141,7 +141,7 @@ class FileSystem:
             bool: True if the password is correct or not required, False otherwise.
         """
         if item.password:
-            password = input(f"Enter password for {item_name}: ")
+            password = str(hash(input(f"Enter password for {item_name}: ")))
             if password != item.password:
                 print("Incorrect password")
                 return False
@@ -207,7 +207,7 @@ class FileSystem:
 
         for i in range(len(path_elements) - 1):
             if path_elements[i].startswith("."):
-                file_password = input(f"Set password for {path_elements[i]}: ")
+                file_password = str(hash(input(f"Set password for {path_elements[i]}: ")))
 
             if not self.check_password(self.current_folder, path_elements[i]):
                 return
@@ -219,7 +219,7 @@ class FileSystem:
             file_password = None
 
         if path_elements[-1].startswith("."):
-            file_password = input(f"Set password for {name}: ")
+            file_password = str(hash(input(f"Set password for {name}: ")))
 
         final_name = path_elements[-1]
         is_hidden_folder = final_name.startswith(".") and "." not in final_name[1:]
