@@ -1,9 +1,9 @@
 {
-    "root": {
-        "name": "/",
-        "type": "folder",
-        "password": null,
-        "contents": {}
-    },
-    "path": "/"
+  "root": {
+    "name": "/",
+    "type": "folder",
+    "password": null,
+    "contents": {}
+  },
+  "path": "/"
 }
