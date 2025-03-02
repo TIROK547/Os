@@ -207,7 +207,9 @@ class FileSystem:
 
         for i in range(len(path_elements) - 1):
             if path_elements[i].startswith("."):
-                file_password = str(hash(input(f"Set password for {path_elements[i]}: ")))
+                file_password = str(
+                    hash(input(f"Set password for {path_elements[i]}: "))
+                )
 
             if not self.check_password(self.current_folder, path_elements[i]):
                 return
